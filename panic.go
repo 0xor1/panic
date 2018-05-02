@@ -41,21 +41,23 @@ func SafeGoGroup(fs ...func()) {
 	errsMtx := &sync.Mutex{}
 	errs := make([]*Error, 0, len(fs))
 	for _, f := range fs {
-		wg.Add(1)
-		go func(){
-			defer func(){
-				defer wg.Done()
-				if rVal := recover(); rVal != nil {
-					errsMtx.Lock()
-					defer errsMtx.Unlock()
-					errs = append(errs, &Error{
-						Stack: string(debug.Stack()),
-						Value: rVal,
-					})
-				}
+		func(f func()) {
+			wg.Add(1)
+			go func() {
+				defer func() {
+					defer wg.Done()
+					if rVal := recover(); rVal != nil {
+						errsMtx.Lock()
+						defer errsMtx.Unlock()
+						errs = append(errs, &Error{
+							Stack: string(debug.Stack()),
+							Value: rVal,
+						})
+					}
+				}()
+				f()
 			}()
-			f()
-		}()
+		}(f)
 	}
 	wg.Wait()
 	if len(errs) > 0 {
