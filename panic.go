@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"runtime/debug"
+	"time"
 )
 
 // If i is not nil, then panic with value i
@@ -33,19 +34,17 @@ func SafeGo(f func(), r func(i interface{})) {
 
 // Runs each of fs in its own go routine, waits for them all to complete and panics with a collection of all the recover
 // values if there are any
-func SafeGoGroup(fs ...func()) {
+func SafeGoGroup(timeout time.Duration, fs ...func()) {
 	if len(fs) < 2 {
 		panic(fmt.Errorf("fs must be 2 or more funcs"))
 	}
-	wg := &sync.WaitGroup{}
+	doneChan := make(chan bool)
 	errsMtx := &sync.Mutex{}
 	errs := make([]*Error, 0, len(fs))
 	for _, f := range fs {
 		func(f func()) {
-			wg.Add(1)
 			go func() {
 				defer func() {
-					defer wg.Done()
 					if rVal := recover(); rVal != nil {
 						errsMtx.Lock()
 						defer errsMtx.Unlock()
@@ -54,12 +53,37 @@ func SafeGoGroup(fs ...func()) {
 							Value: rVal,
 						})
 					}
+					doneChan <- true
 				}()
 				f()
 			}()
 		}(f)
 	}
-	wg.Wait()
+	doneCount := 0
+	if timeout > 0 {
+		timer := time.NewTimer(timeout)
+		for doneCount < len(fs) {
+			select {
+			case <- doneChan:
+				doneCount++
+			case <- timer.C:
+				errsMtx.Lock()
+				defer errsMtx.Unlock()
+				panic(&TimeoutError{
+					Timeout: timeout,
+					GoRoutineCount: len(fs),
+					ReceivedErrors: append(make([]*Error,0, len(errs)), errs...),
+				})
+			}
+		}
+	} else {
+		for doneCount < len(fs) {
+			select {
+			case <- doneChan:
+				doneCount++
+			}
+		}
+	}
 	if len(errs) > 0 {
 		panic(&Error{
 			Value: errs,
@@ -74,4 +98,14 @@ type Error struct{
 
 func (e *Error) Error() string {
 	return fmt.Sprintf("%v\n%s", e.Value, e.Stack)
+}
+
+type TimeoutError struct{
+	Timeout time.Duration
+	GoRoutineCount int
+	ReceivedErrors []*Error
+}
+
+func (e *TimeoutError) Error() string {
+	return fmt.Sprintf("go routine group timed out, timeout %s, go routine count: %d, received errors: %v", e.Timeout, e.GoRoutineCount, e.ReceivedErrors)
 }
