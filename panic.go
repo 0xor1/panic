@@ -2,9 +2,9 @@ package panic
 
 import (
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"time"
+	"runtime/debug"
 )
 
 // If i is not nil, then panic with value i
@@ -40,6 +40,7 @@ func SafeGoGroup(timeout time.Duration, fs ...func()) {
 		panic(fmt.Errorf("fs must be 2 or more funcs"))
 	}
 	doneChan := make(chan bool)
+	defer close(doneChan)
 	errsMtx := &sync.Mutex{}
 	errs := make([]*err, 0, len(fs))
 	for _, f := range fs {
@@ -54,6 +55,9 @@ func SafeGoGroup(timeout time.Duration, fs ...func()) {
 							Value: rVal,
 						})
 					}
+					defer func() {
+						recover() //incase doneChan has been closed after a timeout
+					}()
 					doneChan <- true
 				}()
 				f()
