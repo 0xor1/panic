@@ -48,12 +48,22 @@ defer func(){
     r := recover()
     // r contains each of the panic values and stack traces for each
 }()
+
 //blocking call but safe
-panic.SafeGoGroup(func(){
+panic.SafeGoGroup(0, func(){
     panic(1)
 }(),func(){
     panic(2)
 }(),func(){
     panic(3)
+}())
+
+//with a timeout
+panic.SafeGoGroup(2 * time.Second, func(){
+    time.Sleep(time.Second)
+}(),func(){
+    time.Sleep(time.Second)
+}(),func(){
+    time.Sleep(time.Second)
 }())
 ```

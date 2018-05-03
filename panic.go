@@ -2,8 +2,8 @@ package panic
 
 import (
 	"fmt"
-	"sync"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
@@ -22,8 +22,8 @@ func SafeGo(f func(), r func(i interface{})) {
 	if r == nil {
 		panic(fmt.Errorf("r must be none nil recover func"))
 	}
-	go func(){
-		defer func(){
+	go func() {
+		defer func() {
 			if rVal := recover(); rVal != nil {
 				r(rVal)
 			}
@@ -32,15 +32,16 @@ func SafeGo(f func(), r func(i interface{})) {
 	}()
 }
 
-// Runs each of fs in its own go routine, waits for them all to complete and panics with a collection of all the recover
-// values if there are any
+// Runs each of fs in its own go routine and panics with a collection of all the recover
+// values if there are any, if a timeout of <=0 is passed in then it will not timeout the group,
+// if a timeout of >0 is passed in it will panic after this duration if any go routines are still running.
 func SafeGoGroup(timeout time.Duration, fs ...func()) {
 	if len(fs) < 2 {
 		panic(fmt.Errorf("fs must be 2 or more funcs"))
 	}
 	doneChan := make(chan bool)
 	errsMtx := &sync.Mutex{}
-	errs := make([]*Error, 0, len(fs))
+	errs := make([]*err, 0, len(fs))
 	for _, f := range fs {
 		func(f func()) {
 			go func() {
@@ -48,7 +49,7 @@ func SafeGoGroup(timeout time.Duration, fs ...func()) {
 					if rVal := recover(); rVal != nil {
 						errsMtx.Lock()
 						defer errsMtx.Unlock()
-						errs = append(errs, &Error{
+						errs = append(errs, &err{
 							Stack: string(debug.Stack()),
 							Value: rVal,
 						})
@@ -64,48 +65,48 @@ func SafeGoGroup(timeout time.Duration, fs ...func()) {
 		timer := time.NewTimer(timeout)
 		for doneCount < len(fs) {
 			select {
-			case <- doneChan:
+			case <-doneChan:
 				doneCount++
-			case <- timer.C:
+			case <-timer.C:
 				errsMtx.Lock()
 				defer errsMtx.Unlock()
-				panic(&TimeoutError{
-					Timeout: timeout,
+				panic(&timeoutErr{
+					Timeout:        timeout,
 					GoRoutineCount: len(fs),
-					ReceivedErrors: append(make([]*Error,0, len(errs)), errs...),
+					ReceivedErrors: append(make([]*err, 0, len(errs)), errs...),
 				})
 			}
 		}
 	} else {
 		for doneCount < len(fs) {
 			select {
-			case <- doneChan:
+			case <-doneChan:
 				doneCount++
 			}
 		}
 	}
 	if len(errs) > 0 {
-		panic(&Error{
+		panic(&err{
 			Value: errs,
 		})
 	}
 }
 
-type Error struct{
+type err struct {
 	Stack string
 	Value interface{}
 }
 
-func (e *Error) Error() string {
+func (e *err) Error() string {
 	return fmt.Sprintf("%v\n%s", e.Value, e.Stack)
 }
 
-type TimeoutError struct{
-	Timeout time.Duration
+type timeoutErr struct {
+	Timeout        time.Duration
 	GoRoutineCount int
-	ReceivedErrors []*Error
+	ReceivedErrors []*err
 }
 
-func (e *TimeoutError) Error() string {
+func (e *timeoutErr) Error() string {
 	return fmt.Sprintf("go routine group timed out, timeout %s, go routine count: %d, received errors: %v", e.Timeout, e.GoRoutineCount, e.ReceivedErrors)
 }
