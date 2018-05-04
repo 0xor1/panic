@@ -3,15 +3,29 @@ panic
 
 A small util pkg to help with common panic things
 
-If
-==
+IfTrueWith
+==========
 
 Syntax sugar
 
 ```go
 //old:
+if somethingIsWrong {
+    panic(fmt.Errorf("something is wrong %v", somethingIsWrong))
+}
+//new:
+panic.IfTrueWith(somethingIsWrong, fmt.Errorf("something is wrong %v", somethingIsWrong))
+```
+
+If
+==
+
+Syntax sugar for a not nil bool check, typically useful for checking returned errors
+
+```go
+//old:
 if err := doStuff(); err != nil {
- panic(err)
+    panic(err)
 }
 //new:
 panic.If(doStuff())
