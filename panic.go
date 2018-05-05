@@ -36,7 +36,7 @@ func SafeGo(f func(), r func(i interface{})) {
 // Runs each of fs in its own go routine and panics with a collection of all the recover
 // values if there are any, if a timeout of <=0 is passed in then it will not timeout the group,
 // if a timeout of >0 is passed in it will panic after this duration if any go routines are still running.
-func SafeGoGroup(timeout time.Duration, fs ...func()) {
+func SafeGoGroup(timeout time.Duration, fs ...func()) error {
 	IfTrueWith(len(fs) < 2, fmt.Errorf("fs must be 2 or more funcs"))
 	doneChan := make(chan bool)
 	defer close(doneChan)
@@ -73,11 +73,11 @@ func SafeGoGroup(timeout time.Duration, fs ...func()) {
 			case <-timer.C:
 				errsMtx.Lock()
 				defer errsMtx.Unlock()
-				If(&timeoutErr{
+				return &timeoutErr{
 					Timeout:        timeout,
 					GoRoutineCount: len(fs),
 					ReceivedErrors: append(make([]*err, 0, len(errs)), errs...),
-				})
+				}
 			}
 		}
 	} else {
@@ -88,7 +88,12 @@ func SafeGoGroup(timeout time.Duration, fs ...func()) {
 			}
 		}
 	}
-	IfTrueWith(len(errs) > 0, &err{Value: errs})
+	if len(errs) > 0{
+		return &err{
+			Value: errs,
+		}
+	}
+	return nil
 }
 
 type err struct {

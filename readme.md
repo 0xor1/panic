@@ -58,13 +58,8 @@ SafeGoGroup
 Runs a collection of routines in a wait group and panics with a collection of panicked values
 
 ```go
-defer func(){
-    r := recover()
-    // r contains each of the panic values and stack traces for each
-}()
-
-//blocking call but safe
-panic.SafeGoGroup(0, func(){
+//blocking call but safe, err contains all the panicked values and stack traces for each
+err := panic.SafeGoGroup(0, func(){
     panic(1)
 }(),func(){
     panic(2)
@@ -72,8 +67,8 @@ panic.SafeGoGroup(0, func(){
     panic(3)
 }())
 
-//with a timeout
-panic.SafeGoGroup(2 * time.Second, func(){
+//with a timeout, err == nil
+err := panic.SafeGoGroup(2 * time.Second, func(){
     time.Sleep(time.Second)
 }(),func(){
     time.Sleep(time.Second)
