@@ -3,18 +3,32 @@ panic
 
 A small util pkg to help with common panic things
 
-IfTrueWith
-==========
+IfTrue
+======
 
 Syntax sugar
 
 ```go
 //old:
-if somethingIsWrong {
-    panic(fmt.Errorf("something is wrong %v", somethingIsWrong))
+if something == somethingElse {
+    panic(myError)
 }
 //new:
-panic.IfTrueWith(somethingIsWrong, fmt.Errorf("something is wrong %v", somethingIsWrong))
+panic.IfTrue(something == somethingElse, myError)
+```
+
+IfTruef
+=======
+
+Syntax sugar for formatted string error
+
+```go
+//old:
+if something == somethingElse {
+    panic(fmt.Errorf("something is wrong %v", something))
+}
+//new:
+panic.IfTruef(something == somethingElse, "something is wrong %v", something)
 ```
 
 If
@@ -46,7 +60,7 @@ go func(){
 //application continues as normal
 // non blocking
 panic.SafeGo(func(){
-    panic("uh oh")
+    panic.If("uh oh")
 }(), func(i interface{}) {
     // i == "uh oh"
 })
@@ -60,11 +74,11 @@ Runs a collection of routines in a wait group and returns an error containing al
 ```go
 //blocking call but safe, err contains all the panicked values and stack traces for each
 err := panic.SafeGoGroup(0, func(){
-    panic(1)
+    panic.If(1)
 }(),func(){
-    panic(2)
+    panic.If(2)
 }(),func(){
-    panic(3)
+    panic.If(3)
 }())
 
 //with a timeout, err == nil
