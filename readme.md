@@ -55,7 +55,7 @@ panic.SafeGo(func(){
 SafeGoGroup
 ===========
 
-Runs a collection of routines in a wait group and panics with a collection of panicked values
+Runs a collection of routines in a wait group and returns an error containing all the panicked values and stack traces for each
 
 ```go
 //blocking call but safe, err contains all the panicked values and stack traces for each
