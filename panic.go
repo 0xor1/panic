@@ -119,3 +119,8 @@ type timeoutErr struct {
 func (e *timeoutErr) Error() string {
 	return fmt.Sprintf("go routine group timed out, timeout %s, go routine count: %d, received errors: %v", e.Timeout, e.GoRoutineCount, e.ReceivedErrors)
 }
+
+func IsTimeOutErr(e error) bool {
+	_, ok := e.(*timeoutErr)
+	return ok
+}
