@@ -10,7 +10,14 @@ import (
 // If condition is true, then panic with error format string and args
 func If(condition bool, format string, args ...interface{}) {
 	if condition {
-		panic(fmt.Errorf(format, args...))
+		IfNotNil(fmt.Errorf(format, args...))
+	}
+}
+
+// If err is not nil, panic with value err
+func IfNotNil(err error) {
+	if err != nil {
+		panic(err)
 	}
 }
 
