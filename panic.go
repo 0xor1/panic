@@ -8,26 +8,16 @@ import (
 )
 
 // If condition is true, then panic with error format string and args
-func IfTruef(condition bool, format string, args ...interface{}) {
-	IfTrue(condition, fmt.Errorf(format, args...))
-}
-
-// If condition is true, then panic with value i
-func IfTrue(condition bool, i interface{}) {
+func If(condition bool, format string, args ...interface{}) {
 	if condition {
-		panic(i)
+		panic(fmt.Errorf(format, args...))
 	}
-}
-
-// If i is not nil then panic with value i
-func If(i interface{}) {
-	IfTrue(i != nil, i)
 }
 
 // Runs f in a go routine, if a panic happens r will be passed the value from calling recover
 func SafeGo(f func(), r func(i interface{})) {
-	IfTruef(f == nil, "f must be none nil go routine func")
-	IfTruef(r == nil, "r must be none nil recover func")
+	If(f == nil, "f must be none nil go routine func")
+	If(r == nil, "r must be none nil recover func")
 	go func() {
 		defer func() {
 			if rVal := recover(); rVal != nil {
@@ -42,7 +32,7 @@ func SafeGo(f func(), r func(i interface{})) {
 // values if there are any, if a timeout of <=0 is passed in then it will not timeout the group,
 // if a timeout of >0 is passed in it will panic after this duration if any go routines are still running.
 func SafeGoGroup(timeout time.Duration, fs ...func()) error {
-	IfTruef(len(fs) < 2, "fs must be 2 or more funcs")
+	If(len(fs) < 2, "fs must be 2 or more funcs")
 	doneChan := make(chan bool)
 	defer close(doneChan)
 	errsMtx := &sync.Mutex{}

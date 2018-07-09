@@ -8,12 +8,14 @@ import(
 )
 
 func Test_If(t *testing.T) {
-	If(nil)
+	var e error
+	If(e != nil, "an error")
 	defer func(){
 		r := recover()
-		assert.Equal(t, assert.AnError, r)
+		assert.Equal(t, "an error", r.(error).Error())
 	}()
-	If(assert.AnError)
+
+	If(true, "an error")
 }
 
 func Test_SafeGo(t *testing.T) {
@@ -61,6 +63,7 @@ func Test_SafeGoGroup(t *testing.T) {
 		time.Sleep(2 * time.Second)
 	})
 
+	assert.True(t, IsTimeOutErr(e))
 	assert.Equal(t, 3, e.(*timeoutErr).GoRoutineCount)
 	assert.Equal(t, time.Second, e.(*timeoutErr).Timeout)
 	assert.Equal(t, 2, len(e.(*timeoutErr).ReceivedErrors))
