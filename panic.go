@@ -15,9 +15,9 @@ func If(condition bool, format string, args ...interface{}) {
 }
 
 // If err is not nil, panic with value err
-func IfNotNil(err error) {
-	if err != nil {
-		panic(err)
+func IfNotNil(e interface{}) {
+	if e != nil {
+		panic(e)
 	}
 }
 
