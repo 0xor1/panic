@@ -3,38 +3,8 @@ panic
 
 A small util pkg to help with common panic things
 
-IfTrue
-======
-
-Syntax sugar
-
-```go
-//old:
-if something == somethingElse {
-    panic(myError)
-}
-//new:
-panic.IfTrue(something == somethingElse, myError)
-```
-
-IfTruef
-=======
-
-Syntax sugar for formatted string error
-
-```go
-//old:
-if something == somethingElse {
-    panic(fmt.Errorf("something is wrong %v", something))
-}
-//new:
-panic.IfTruef(something == somethingElse, "something is wrong %v", something)
-```
-
 If
 ==
-
-Syntax sugar for a not nil bool check, typically useful for checking returned errors
 
 ```go
 //old:
@@ -43,6 +13,17 @@ if err := doStuff(); err != nil {
 }
 //new:
 panic.If(doStuff())
+```
+
+IfNotNil
+========
+
+```go
+if err := doStuff(); err != nil {
+    panic(err)
+}
+//new:
+panic.IfNotNil(doStuff())
 ```
 
 SafeGo
@@ -73,7 +54,7 @@ Runs a collection of routines in a wait group and returns an error containing al
 
 ```go
 //blocking call but safe, err contains all the panicked values and stack traces for each
-err := panic.SafeGoGroup(0, func(){
+err := panic.SafeGoGroup(func(){
     panic.If(1)
 }(),func(){
     panic.If(2)
@@ -82,11 +63,29 @@ err := panic.SafeGoGroup(0, func(){
 }())
 
 //with a timeout, err == nil
-err := panic.SafeGoGroup(2 * time.Second, func(){
-    time.Sleep(time.Second)
+ctx := context.Background()
+ctx, cancel := context.WithTimeout(ctx, 1 * time.Second)
+defer cancel()
+err := panic.SafeGoGroup(func(){
+    select {
+    case <-time.After(2 * time.Second):
+        panic(1)
+    case <-ctx.Done():
+        return
+    }
 }(),func(){
-    time.Sleep(time.Second)
+    select {
+    case <-time.After(2 * time.Second):
+        panic(2)
+    case <-ctx.Done():
+        return
+    }
 }(),func(){
-    time.Sleep(time.Second)
+    select {
+    case <-time.After(2 * time.Second):
+        panic(3)
+    case <-ctx.Done():
+        return
+    }
 }())
 ```

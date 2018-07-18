@@ -5,6 +5,7 @@ import(
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"time"
+	"context"
 )
 
 func Test_If(t *testing.T) {
@@ -31,7 +32,7 @@ func Test_SafeGo(t *testing.T) {
 }
 
 func Test_SafeGoGroup(t *testing.T) {
-	e := SafeGoGroup(0, func(){
+	e := SafeGoGroup(func(){
 		panic(0)
 	}, func(){
 		panic(1)
@@ -47,7 +48,7 @@ func Test_SafeGoGroup(t *testing.T) {
 	assert.True(t, idxIsPresent[0] && idxIsPresent[1] && idxIsPresent[2])
 	e.(*err).Error()
 
-	assert.Nil(t, SafeGoGroup(2 * time.Second, func(){
+	assert.Nil(t, SafeGoGroup(func(){
 		time.Sleep(time.Second)
 	}, func(){
 		time.Sleep(time.Second)
@@ -55,17 +56,27 @@ func Test_SafeGoGroup(t *testing.T) {
 		time.Sleep(time.Second)
 	}))
 
-	e = SafeGoGroup(time.Second, func(){
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 1 * time.Second)
+	defer cancel()
+	e = SafeGoGroup(func(){
 		panic(0)
 	}, func(){
 		panic(1)
 	}, func(){
-		time.Sleep(2 * time.Second)
+		select {
+		case <-time.After(200 * time.Second):
+			panic(2)
+		case <-ctx.Done():
+			panic(3)
+		}
 	})
 
-	assert.True(t, IsTimeOutErr(e))
-	assert.Equal(t, 3, e.(*timeoutErr).GoRoutineCount)
-	assert.Equal(t, time.Second, e.(*timeoutErr).Timeout)
-	assert.Equal(t, 2, len(e.(*timeoutErr).ReceivedErrors))
-	e.(*timeoutErr).Error()
+	assert.Equal(t, 3, len(e.(*err).Value.([]*err)))
+	idxIsPresent = []bool{false, false, false, false}
+	for _, e := range e.(*err).Value.([]*err) {
+		idxIsPresent[e.Value.(int)] = true
+	}
+	assert.True(t, idxIsPresent[0] && idxIsPresent[1] && !idxIsPresent[2] && idxIsPresent[3])
+	e.(*err).Error()
 }
