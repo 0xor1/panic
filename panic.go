@@ -40,7 +40,6 @@ func SafeGo(f func(), r func(i interface{})) {
 // values if there are any, each routine should use context.Context to handle freeing of resources
 // if necessary on a timeout/deadline/cancellation signal.
 func SafeGoGroup(fs ...func()) *Errors {
-	If(len(fs) < 1, "fs must be 1 or more funcs")
 	doneChan := make(chan bool)
 	defer close(doneChan)
 	errsMtx := &sync.Mutex{}
