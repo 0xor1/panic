@@ -16,7 +16,7 @@ func If(condition bool, format string, args ...interface{}) {
 }
 
 // If err is not nil, panic with value err
-func IfNotNil(e error) {
+func IfNotNil(e interface{}) {
 	panickedDoingReflectionCheck := true
 	defer func() {
 		if panickedDoingReflectionCheck {
