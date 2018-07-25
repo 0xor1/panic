@@ -3,6 +3,7 @@ package panic
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"runtime/debug"
 	"sync"
 )
@@ -15,10 +16,18 @@ func If(condition bool, format string, args ...interface{}) {
 }
 
 // If err is not nil, panic with value err
-func IfNotNil(e interface{}) {
-	if e != nil {
-		panic(e)
+func IfNotNil(e error) {
+	panickedDoingReflectionCheck := true
+	defer func() {
+		if panickedDoingReflectionCheck {
+			recover()
+		}
+	}()
+	if e == nil || reflect.ValueOf(e).IsNil() {
+		return
 	}
+	panickedDoingReflectionCheck = false
+	panic(e)
 }
 
 // Runs f in a go routine, if a panic happens r will be passed the value from calling recover, f should use
@@ -43,7 +52,7 @@ func SafeGoGroup(fs ...func()) *Errors {
 	doneChan := make(chan bool)
 	defer close(doneChan)
 	errsMtx := &sync.Mutex{}
-	errs := make([]*PanicErr, 0, len(fs))
+	errs := make([]*Error, 0, len(fs))
 	for _, f := range fs {
 		func(f func()) {
 			go func() {
@@ -51,7 +60,7 @@ func SafeGoGroup(fs ...func()) *Errors {
 					if rVal := recover(); rVal != nil {
 						errsMtx.Lock()
 						defer errsMtx.Unlock()
-						errs = append(errs, &PanicErr{
+						errs = append(errs, &Error{
 							StackTrace:   string(debug.Stack()),
 							RecoverValue: rVal,
 						})
@@ -78,10 +87,10 @@ func SafeGoGroup(fs ...func()) *Errors {
 }
 
 type Errors struct {
-	Errors []*PanicErr
+	Errors []*Error
 }
 
-func (e *Errors) Error() string {
+func (e Errors) Error() string {
 	buf := bytes.NewBufferString("")
 	for _, err := range e.Errors {
 		buf.WriteString(err.Error())
@@ -89,11 +98,11 @@ func (e *Errors) Error() string {
 	return buf.String()
 }
 
-type PanicErr struct {
+type Error struct {
 	StackTrace   string
 	RecoverValue interface{}
 }
 
-func (e *PanicErr) Error() string {
+func (e Error) Error() string {
 	return fmt.Sprintf("%v\n%s\n", e.RecoverValue, e.StackTrace)
 }

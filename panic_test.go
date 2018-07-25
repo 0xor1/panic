@@ -80,4 +80,5 @@ func Test_SafeGoGroup(t *testing.T) {
 	assert.True(t, idxIsPresent[0] && idxIsPresent[1] && !idxIsPresent[2] && idxIsPresent[3])
 	e.Error()
 	assert.Nil(t, SafeGoGroup())
+	IfNotNil(SafeGoGroup())
 }
