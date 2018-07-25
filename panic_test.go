@@ -81,4 +81,5 @@ func Test_SafeGoGroup(t *testing.T) {
 	e.Error()
 	assert.Nil(t, SafeGoGroup())
 	IfNotNil(SafeGoGroup())
+	IfNotNil(struct{}{})
 }
