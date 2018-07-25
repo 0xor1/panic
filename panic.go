@@ -1,9 +1,10 @@
 package panic
 
 import (
+	"bytes"
 	"fmt"
-	"sync"
 	"runtime/debug"
+	"sync"
 )
 
 // If condition is true, then panic with error format string and args
@@ -38,12 +39,12 @@ func SafeGo(f func(), r func(i interface{})) {
 // Runs each of fs in its own go routine and returns with a collection of all the recover
 // values if there are any, each routine should use context.Context to handle freeing of resources
 // if necessary on a timeout/deadline/cancellation signal.
-func SafeGoGroup(fs ...func()) error {
+func SafeGoGroup(fs ...func()) *Errors {
 	If(len(fs) < 2, "fs must be 2 or more funcs")
 	doneChan := make(chan bool)
 	defer close(doneChan)
 	errsMtx := &sync.Mutex{}
-	errs := make([]*err, 0, len(fs))
+	errs := make([]*PanicErr, 0, len(fs))
 	for _, f := range fs {
 		func(f func()) {
 			go func() {
@@ -51,9 +52,9 @@ func SafeGoGroup(fs ...func()) error {
 					if rVal := recover(); rVal != nil {
 						errsMtx.Lock()
 						defer errsMtx.Unlock()
-						errs = append(errs, &err{
-							Stack: string(debug.Stack()),
-							Value: rVal,
+						errs = append(errs, &PanicErr{
+							StackTrace:   string(debug.Stack()),
+							RecoverValue: rVal,
 						})
 					}
 					doneChan <- true
@@ -69,19 +70,31 @@ func SafeGoGroup(fs ...func()) error {
 			doneCount++
 		}
 	}
-	if len(errs) > 0{
-		return &err{
-			Value: errs,
+	if len(errs) > 0 {
+		return &Errors{
+			Errors: errs,
 		}
 	}
 	return nil
 }
 
-type err struct {
-	Stack string
-	Value interface{}
+type Errors struct {
+	Errors []*PanicErr
 }
 
-func (e *err) Error() string {
-	return fmt.Sprintf("%v\n%s", e.Value, e.Stack)
+func (e *Errors) Error() string {
+	buf := bytes.NewBufferString("")
+	for _, err := range e.Errors {
+		buf.WriteString(err.Error())
+	}
+	return buf.String()
+}
+
+type PanicErr struct {
+	StackTrace   string
+	RecoverValue interface{}
+}
+
+func (e *PanicErr) Error() string {
+	return fmt.Sprintf("%v\n%s\n", e.RecoverValue, e.StackTrace)
 }
