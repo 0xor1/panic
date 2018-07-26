@@ -40,9 +40,9 @@ func Test_SafeGoGroup(t *testing.T) {
 		panic(2)
 	})
 
-	assert.Equal(t, 3, len(e.Errors))
+	assert.Equal(t, 3, len(e.(*Errors).Errors))
 	idxIsPresent := []bool{false, false, false}
-	for _, e := range e.Errors {
+	for _, e := range e.(*Errors).Errors {
 		idxIsPresent[e.RecoverValue.(int)] = true
 	}
 	assert.True(t, idxIsPresent[0] && idxIsPresent[1] && idxIsPresent[2])
@@ -72,14 +72,13 @@ func Test_SafeGoGroup(t *testing.T) {
 		}
 	})
 
-	assert.Equal(t, 3, len(e.Errors))
+	assert.Equal(t, 3, len(e.(*Errors).Errors))
 	idxIsPresent = []bool{false, false, false, false}
-	for _, e := range e.Errors {
+	for _, e := range e.(*Errors).Errors {
 		idxIsPresent[e.RecoverValue.(int)] = true
 	}
 	assert.True(t, idxIsPresent[0] && idxIsPresent[1] && !idxIsPresent[2] && idxIsPresent[3])
 	e.Error()
 	assert.Nil(t, SafeGoGroup())
 	IfNotNil(SafeGoGroup())
-	IfNotNil(struct{}{})
 }

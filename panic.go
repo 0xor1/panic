@@ -3,7 +3,6 @@ package panic
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"runtime/debug"
 	"sync"
 )
@@ -16,18 +15,10 @@ func If(condition bool, format string, args ...interface{}) {
 }
 
 // If err is not nil, panic with value err
-func IfNotNil(e interface{}) {
-	panickedDoingReflectionCheck := true
-	defer func() {
-		if panickedDoingReflectionCheck {
-			recover()
-		}
-	}()
-	if e == nil || reflect.ValueOf(e).IsNil() {
-		return
+func IfNotNil(e error) {
+	if e != nil {
+		panic(e)
 	}
-	panickedDoingReflectionCheck = false
-	panic(e)
 }
 
 // Runs f in a go routine, if a panic happens r will be passed the value from calling recover, f should use
@@ -48,7 +39,7 @@ func SafeGo(f func(), r func(i interface{})) {
 // Runs each of fs in its own go routine and returns with a collection of all the recover
 // values if there are any, each routine should use context.Context to handle freeing of resources
 // if necessary on a timeout/deadline/cancellation signal.
-func SafeGoGroup(fs ...func()) *Errors {
+func SafeGoGroup(fs ...func()) error {
 	doneChan := make(chan bool)
 	defer close(doneChan)
 	errsMtx := &sync.Mutex{}
