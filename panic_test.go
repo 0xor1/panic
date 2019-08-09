@@ -9,8 +9,7 @@ import (
 )
 
 func Test_If(t *testing.T) {
-	var e error
-	If(e != nil, "an error")
+	If(false, "an error")
 	defer func() {
 		r := recover()
 		assert.Equal(t, "an error", r.(error).Error())

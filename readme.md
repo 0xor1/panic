@@ -8,11 +8,12 @@ If
 
 ```go
 //old:
-if err := doStuff(); err != nil {
-    panic(err)
+if shouldBeOne := returnOne(); shouldBeOne != 1 {
+    panic(fmt.Errorf("returnOne did not return one, it returned %d", shouldBeOne))
 }
 //new:
-panic.If(doStuff())
+shouldBeOne := returnOne()
+panic.If(shouldBeOne != 1, "returnOne did not return one, it returned %d", shouldBeOne)
 ```
 
 IfNotNil
@@ -41,7 +42,7 @@ go func(){
 //application continues as normal
 // non blocking
 panic.SafeGo(func(){
-    panic.If("uh oh")
+    panic.If(true, "uh oh")
 }(), func(i interface{}) {
     // i == "uh oh"
 })
@@ -55,11 +56,11 @@ Runs a collection of routines in a wait group and returns an error containing al
 ```go
 //blocking call but safe, err contains all the panicked values and stack traces for each
 err := panic.SafeGoGroup(func(){
-    panic.If(1)
+    panic.If(true, 1)
 }(),func(){
-    panic.If(2)
+    panic.If(true, 2)
 }(),func(){
-    panic.If(3)
+    panic.If(true, 3)
 }())
 
 //with a timeout, err == nil
@@ -69,21 +70,21 @@ defer cancel()
 err := panic.SafeGoGroup(func(){
     select {
     case <-time.After(2 * time.Second):
-        panic(1)
+        panic.If(true, 1)
     case <-ctx.Done():
         return
     }
 }(),func(){
     select {
     case <-time.After(2 * time.Second):
-        panic(2)
+        panic.If(true, 2)
     case <-ctx.Done():
         return
     }
 }(),func(){
     select {
     case <-time.After(2 * time.Second):
-        panic(3)
+        panic.If(true, 3)
     case <-ctx.Done():
         return
     }
